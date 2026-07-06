@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ファイル名プレフィクス付与ツール</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --border: #2a2f3e;
+    --accent: #4fc3f7;
+    --accent2: #81c784;
+    --accent3: #ffb74d;
+    --accent4: #ce93d8;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Noto Sans JP', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 40px 20px;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(79,195,247,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(129,199,132,0.04) 0%, transparent 50%);
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 36px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  /* バッジグリッド */
+  .badge-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  /* 今日のプレフィクス表示 */
+  .prefix-badge-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .badge-inner {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .suffix-badge {
+    border-color: rgba(255,183,77,0.25);
+    background: rgba(255,183,77,0.04);
+  }
+
+  .suffix-date-badge {
+    border-color: rgba(206,147,216,0.25);
+    background: rgba(206,147,216,0.04);
+  }
+
+  .badge-hint {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 300;
+    letter-spacing: 0;
+    margin-top: 1px;
+  }
+
+  .prefix-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .prefix-value {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .suffix-value {
+    color: var(--accent3);
+  }
+
+  .suffix-date-value {
+    color: var(--accent4);
+  }
+
+  /* モード切替 */
+  .mode-toggle {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 3px;
+    width: fit-content;
+  }
+
+  .mode-btn {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+
+  .mode-btn.active-prefix {
+    background: rgba(79,195,247,0.15);
+    color: var(--accent);
+  }
+
+  .mode-btn.active-suffix {
+    background: rgba(255,183,77,0.15);
+    color: var(--accent3);
+  }
+
+  .mode-btn.active-suffix-date {
+    background: rgba(206,147,216,0.15);
+    color: var(--accent4);
+  }
+
+  /* タブ */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-weight: 400;
+  }
+
+  .tab.active {
+    background: var(--bg);
+    color: var(--text);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+
+  /* パネル */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* 入力 */
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  input[type="text"], textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  input[type="text"]:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  input[type="text"]::placeholder, textarea::placeholder {
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+
+  textarea {
+    min-height: 130px;
+    line-height: 1.7;
+  }
+
+  /* 結果 */
+  .result-wrap {
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .result-header-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  .copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .copy-btn.copied {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* 単体結果 */
+  .single-result {
+    padding: 16px 14px;
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--text);
+    word-break: break-all;
+    min-height: 56px;
+  }
+
+  .single-result .prefix-part {
+    color: var(--accent);
+  }
+
+  .single-result .suffix-part {
+    color: var(--accent3);
+  }
+
+  .single-result .suffix-date-part {
+    color: var(--accent4);
+  }
+
+  .single-result .empty-hint {
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  /* バッチ結果 */
+  .batch-result-list {
+    padding: 8px 0;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .batch-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    gap: 10px;
+    transition: background 0.1s;
+  }
+
+  .batch-item:hover {
+    background: rgba(255,255,255,0.03);
+  }
+
+  .batch-item-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-all;
+    flex: 1;
+  }
+
+  .batch-item-name .prefix-part {
+    color: var(--accent);
+  }
+
+  .batch-item-copy {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    font-size: 11px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .batch-item-copy:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .batch-item-copy.copied {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .batch-item-name .prefix-part { color: var(--accent); }
+  .batch-item-name .suffix-part { color: var(--accent3); }
+  .batch-item-name .suffix-date-part { color: var(--accent4); }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 6px 0;
+  }
+
+  .empty-batch {
+    padding: 20px 14px;
+    color: var(--muted);
+    font-size: 13px;
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* ヒント */
+  .hint {
+    margin-top: 24px;
+    padding: 14px 16px;
+    background: rgba(79,195,247,0.06);
+    border-left: 3px solid rgba(79,195,247,0.3);
+    border-radius: 0 8px 8px 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .hint strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* プレフィクスコピーボタン */
+  .prefix-copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: rgba(79,195,247,0.1);
+    border: 1px solid rgba(79,195,247,0.35);
+    border-radius: 7px;
+    color: var(--accent);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .prefix-copy-btn:hover {
+    background: rgba(79,195,247,0.18);
+    border-color: var(--accent);
+  }
+
+  .prefix-copy-btn.copied {
+    background: rgba(129,199,132,0.12);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .suffix-copy-btn {
+    background: rgba(255,183,77,0.1);
+    border-color: rgba(255,183,77,0.35);
+    color: var(--accent3);
+  }
+
+  .suffix-copy-btn:hover {
+    background: rgba(255,183,77,0.18);
+    border-color: var(--accent3);
+  }
+
+  .suffix-date-copy-btn {
+    background: rgba(206,147,216,0.1);
+    border-color: rgba(206,147,216,0.35);
+    color: var(--accent4);
+  }
+
+  .suffix-date-copy-btn:hover {
+    background: rgba(206,147,216,0.18);
+    border-color: var(--accent4);
+  }
+
+  /* よく使う文言 */
+  .snippets-section {
+    margin-top: 36px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+  }
+
+  .snippets-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .snippet-group {
+    margin-bottom: 20px;
+  }
+
+  .snippet-group-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+
+  .snippet-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(79,195,247,0.06);
+  }
+
+  .chip.copied {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(129,199,132,0.08);
+  }
+
+  .chip svg { flex-shrink: 0; opacity: 0.6; }
+
+  .snippet-long-item {
+    margin-bottom: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+
+  .snippet-long-item:hover {
+    border-color: rgba(79,195,247,0.4);
+  }
+
+  .snippet-long-body {
+    padding: 12px 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .snippet-long-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 6px 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .snippet-long-copy {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.15s;
+  }
+
+  .snippet-long-copy:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .snippet-long-copy.copied {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* 見積項目 */
+  .quote-group {
+    margin-bottom: 16px;
+  }
+
+  .quote-group-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    padding-left: 2px;
+  }
+
+  .quote-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .quote-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 14px;
+    transition: background 0.12s;
+  }
+
+  .quote-row:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .quote-row:hover {
+    background: rgba(255,255,255,0.025);
+  }
+
+  .quote-name {
+    font-size: 13px;
+    color: var(--text);
+    font-family: var(--sans);
+    word-break: break-all;
+  }
+
+  .quote-price {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent3);
+    font-weight: 600;
+    white-space: nowrap;
+    min-width: 64px;
+    text-align: right;
+  }
+
+  .quote-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .quote-btn.name-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .quote-btn.price-btn:hover {
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+
+  .quote-btn.copied {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* スクロールバー */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="eyebrow">File Rename Tool</div>
+    <h1>ファイル名プレフィクス付与</h1>
+    <p class="subtitle">今日の日付を半角アンダーバー付きでファイル名の先頭にコピー</p>
+  </header>
+
+  <div class="badge-grid">
+    <div class="prefix-badge-wrap">
+      <div>
+        <div class="prefix-label">プレフィクス<span class="badge-hint">_yymmdd 先頭</span></div>
+        <div class="prefix-value" id="todayPrefix">_260415</div>
+      </div>
+      <div class="badge-inner">
+        <button class="prefix-copy-btn" id="prefixCopyBtn" onclick="copyBadge('prefix')">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+          コピー
+        </button>
+      </div>
+    </div>
+    <div class="prefix-badge-wrap suffix-badge">
+      <div>
+        <div class="prefix-label">サフィックスA<span class="badge-hint">yymm_ 先頭</span></div>
+        <div class="prefix-value suffix-value" id="todaySuffix">2604_</div>
+      </div>
+      <div class="badge-inner">
+        <button class="prefix-copy-btn suffix-copy-btn" id="suffixCopyBtn" onclick="copyBadge('suffix')">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+          コピー
+        </button>
+      </div>
+    </div>
+    <div class="prefix-badge-wrap suffix-date-badge">
+      <div>
+        <div class="prefix-label">サフィックスB<span class="badge-hint">yymmdd_ 先頭</span></div>
+        <div class="prefix-value suffix-date-value" id="todaySuffixDate">260415_</div>
+      </div>
+      <div class="badge-inner">
+        <button class="prefix-copy-btn suffix-date-copy-btn" id="suffixDateCopyBtn" onclick="copyBadge('suffixdate')">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+          コピー
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('single', this)">単体ファイル</button>
+    <button class="tab" onclick="switchTab('batch', this)">一括（複数ファイル）</button>
+  </div>
+
+  <!-- 単体 -->
+  <div class="panel active" id="panel-single">
+    <div class="mode-toggle">
+      <button class="mode-btn active-prefix" id="singleModePrefix" onclick="setMode('single','prefix')">_260415</button>
+      <button class="mode-btn" id="singleModeSuffix" onclick="setMode('single','suffix')">2604_</button>
+      <button class="mode-btn" id="singleModeSuffixDate" onclick="setMode('single','suffixdate')">260415_</button>
+    </div>
+    <label>元のファイル名を入力</label>
+    <input type="text" id="singleInput" placeholder="例：会議資料.docx" oninput="updateSingle()" />
+
+    <div class="result-wrap" style="margin-top:16px;">
+      <div class="result-header">
+        <span class="result-header-label">リネーム後のファイル名</span>
+        <button class="copy-btn" id="singleCopyBtn" onclick="copySingle()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/>
+          </svg>
+          コピー
+        </button>
+      </div>
+      <div class="single-result" id="singleResult">
+        <span class="empty-hint">ファイル名を入力すると表示されます</span>
+      </div>
+    </div>
+
+    <div class="hint">
+      <strong>手順：</strong>コピーしたファイル名をそのまま、エクスプローラーのリネーム（F2キー）で貼り付けてください。
+    </div>
+  </div>
+
+  <!-- 一括 -->
+  <div class="panel" id="panel-batch">
+    <div class="mode-toggle">
+      <button class="mode-btn active-prefix" id="batchModePrefix" onclick="setMode('batch','prefix')">_260415</button>
+      <button class="mode-btn" id="batchModeSuffix" onclick="setMode('batch','suffix')">2604_</button>
+      <button class="mode-btn" id="batchModeSuffixDate" onclick="setMode('batch','suffixdate')">260415_</button>
+    </div>
+    <label>ファイル名を1行ずつ入力（複数可）</label>
+    <textarea id="batchInput" placeholder="会議資料.docx&#10;見積書_A社.xlsx&#10;提案書_v2.pptx" oninput="updateBatch()"></textarea>
+
+    <div class="result-wrap">
+      <div class="result-header">
+        <span class="result-header-label">リネーム後のファイル名一覧</span>
+        <button class="copy-btn" id="allCopyBtn" onclick="copyAll()">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/>
+          </svg>
+          全件コピー
+        </button>
+      </div>
+      <div id="batchList" class="batch-result-list">
+        <div class="empty-batch">ファイル名を入力すると表示されます</div>
+      </div>
+    </div>
+
+    <div class="hint">
+      <strong>手順：</strong>各行の「コピー」ボタンでファイル名を個別にコピー、または「全件コピー」で一気に取得できます。<br>
+      エクスプローラーで F2 キーを押して貼り付けてリネームしてください。
+    </div>
+  </div>
+
+  <!-- よく使う文言 -->
+  <div class="snippets-section">
+    <div class="snippets-eyebrow">Quick Copy — よく使う文言</div>
+
+    <div class="snippet-group">
+      <div class="snippet-group-label">件名・ファイル名ラベル</div>
+      <div class="snippet-chips">
+        <button class="chip" onclick="copyChip(this, '【御見積書】')">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+          【御見積書】
+        </button>
+        <button class="chip" onclick="copyChip(this, '【注文書】')">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+          【注文書】
+        </button>
+        <button class="chip" onclick="copyChip(this, '【スペック】')">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+          【スペック】
+        </button>
+        <button class="chip" onclick="copyChip(this, '【サイン済み注文書】')">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+          【サイン済み注文書】
+        </button>
+      </div>
+    </div>
+
+    <div class="snippet-group">
+      <div class="snippet-group-label">見積カテゴリラベル</div>
+      <div class="snippet-chips" id="quoteCategoryChips"></div>
+    </div>
+
+    <div class="snippet-group">
+      <div class="snippet-group-label">定型文</div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">内容に問題がなければ、注文書の「注文日」にご記入のうえ、「決済方法」欄にチェックをご記入いただき、右上にご署名・ご捺印のうえ、スキャンデータをご返信いただけますと幸いです。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '内容に問題がなければ、注文書の「注文日」にご記入のうえ、「決済方法」欄にチェックをご記入いただき、右上にご署名・ご捺印のうえ、スキャンデータをご返信いただけますと幸いです。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">内容に問題がなければ、「注文日」にご記入のうえ、右上にご署名・ご捺印のうえ、スキャンデータをご返信いただけますと幸いです。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '内容に問題がなければ、「注文日」にご記入のうえ、右上にご署名・ご捺印のうえ、スキャンデータをご返信いただけますと幸いです。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">今回、リース契約となっておりますため、注文書の「決済方法」欄のご記入は不要です。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '今回、リース契約となっておりますため、注文書の「決済方法」欄のご記入は不要です。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">また、リース契約につきまして。電子契約をご利用いただくことも可能です。記入や郵送の手間を削減できますので、ぜひご検討ください。これまで通り複写式の契約書もお選びいただけますので、ご希望をお知らせいただけますと幸いです。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, 'また、リース契約につきまして。電子契約をご利用いただくことも可能です。記入や郵送の手間を削減できますので、ぜひご検討ください。これまで通り複写式の契約書もお選びいただけますので、ご希望をお知らせいただけますと幸いです。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">電子契約をご希望の場合、下記の情報をご提供ください。
+・部署名・役職名（可能であればご記入ください）
+・担当者様氏名（フルネーム）※必須
+・メールアドレス ※必須</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '電子契約をご希望の場合、下記の情報をご提供ください。\n・部署名・役職名（可能であればご記入ください）\n・担当者様氏名（フルネーム）※必須\n・メールアドレス ※必須')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">リース契約をご希望の場合は、「決済方法」欄のご記入は不要です。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, 'リース契約をご希望の場合は、「決済方法」欄のご記入は不要です。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">仕入れ先にて在庫を確認しますので、スペックおよび価格について確認でき次第、改めてご連絡差し上げます。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '仕入れ先にて在庫を確認しますので、スペックおよび価格について確認でき次第、改めてご連絡差し上げます。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">納期につきましては、ご注文書をいただいてから約1週間を予定しております。
+流れは下記のとおりです。
+ 
+ご注文後、翌々営業日までに弊社へ納入
+↓
+キッティング等を実施後、御社へ配送
+↓
+到着後、設置・データ移行作業を実施</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '納期につきましては、ご注文書をいただいてから約1週間を予定しております。\n流れは下記のとおりです。\n \nご注文後、翌々営業日までに弊社へ納入\n↓\nキッティング等を実施後、御社へ配送\n↓\n到着後、設置・データ移行作業を実施')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">なお、キッティングおよびデータ移行が不要の場合は、仕入れ先から直接お送りすることも可能です。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, 'なお、キッティングおよびデータ移行が不要の場合は、仕入れ先から直接お送りすることも可能です。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">※PC入替え基本パックの内容
+パソコン本体設置、メール移行（10GB）、ドキュメントデータ移行（10GB）、プリンタドライバ設定（1台）のセット価格です。基本訪問費は別途必要です。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '※PC入替え基本パックの内容\nパソコン本体設置、メール移行（10GB）、ドキュメントデータ移行（10GB）、プリンタドライバ設定（1台）のセット価格です。基本訪問費は別途必要です。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">※送付のみをご希望の場合、手配料・送料として1台あたり3,000円（税抜）を頂戴します。仕入れ先より直接発送し、納品いたします。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '※送付のみをご希望の場合、手配料・送料として1台あたり3,000円（税抜）を頂戴します。仕入れ先より直接発送し、納品いたします。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">（※件名を変更してお送りしております。）</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '（※件名を変更してお送りしております。）')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">（CC：に●●を追加しております）</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '（CC：に●●を追加しております）')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">このたびはご発注のご連絡をいただき、誠にありがとうございます。
+ご期待に添えるよう、誠心誠意対応させていただきます。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, 'このたびはご発注のご連絡をいただき、誠にありがとうございます。\nご期待に添えるよう、誠心誠意対応させていただきます。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">複合機の搬出・搬入作業の際には、
+入口の門の解錠等にご協力いただけますと幸いです。
+また、当日までにご使用予定の資料がございましたら、
+あらかじめ印刷をお済ませいただきますようお願いいたします。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '複合機の搬出・搬入作業の際には、\n入口の門の解錠等にご協力いただけますと幸いです。\nまた、当日までにご使用予定の資料がございましたら、\nあらかじめ印刷をお済ませいただきますようお願いいたします。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">弊社への納品後、キッティング、配送準備の目処が立ちましたら、
+受取日および設置作業日の日程調整をさせていただけますと幸いです。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, '弊社への納品後、キッティング、配送準備の目処が立ちましたら、\n受取日および設置作業日の日程調整をさせていただけますと幸いです。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div class="snippet-long-item">
+        <div class="snippet-long-body">なお、今回リース契約をご希望の場合は、注文書の「決済方法」欄のご記入は不要です。</div>
+        <div class="snippet-long-footer">
+          <button class="snippet-long-copy" onclick="copyChip(this, 'なお、今回リース契約をご希望の場合は、注文書の「決済方法」欄のご記入は不要です。')">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>
+            コピー
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="snippet-group">
+      <div class="snippet-group-label">見積項目（品名・金額をそれぞれコピー）</div>
+      <div id="quoteItemsContainer"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // 日付文字列生成
+  function getPrefix()      { const d=new Date(), yy=String(d.getFullYear()).slice(-2), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0'); return `_${yy}${mm}${dd}`; }
+  function getSuffix()      { const d=new Date(), yy=String(d.getFullYear()).slice(-2), mm=String(d.getMonth()+1).padStart(2,'0'); return `${yy}${mm}_`; }
+  function getSuffixDate()  { const d=new Date(), yy=String(d.getFullYear()).slice(-2), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0'); return `${yy}${mm}${dd}_`; }
+
+  const prefix     = getPrefix();
+  const suffix     = getSuffix();
+  const suffixDate = getSuffixDate();
+
+  // モード状態
+  const mode = { single: 'prefix', batch: 'prefix' };
+
+  // バッジ初期化
+  document.getElementById('todayPrefix').textContent    = prefix;
+  document.getElementById('todaySuffix').textContent    = suffix;
+  document.getElementById('todaySuffixDate').textContent = suffixDate;
+
+  // タブ切替
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  // モード切替（3種類）
+  function setMode(panel, m) {
+    mode[panel] = m;
+    const ids = { prefix: panel+'ModePrefix', suffix: panel+'ModeSuffix', suffixdate: panel+'ModeSuffixDate' };
+    const activeClass = { prefix: 'active-prefix', suffix: 'active-suffix', suffixdate: 'active-suffix-date' };
+    Object.entries(ids).forEach(([k, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.className = 'mode-btn' + (k === m ? ' ' + activeClass[k] : '');
+    });
+    if (panel === 'single') updateSingle(); else updateBatch();
+  }
+
+  function getTagByMode(m) {
+    return m === 'suffix' ? suffix : m === 'suffixdate' ? suffixDate : prefix;
+  }
+
+  function getTag(panel)        { return getTagByMode(mode[panel]); }
+  function getColorClass(panel) { return mode[panel] === 'suffix' ? 'suffix-part' : mode[panel] === 'suffixdate' ? 'suffix-date-part' : 'prefix-part'; }
+  function applyTag(panel, name){ return getTag(panel) + name; }
+
+  // バッジコピー
+  const COPY_ICON  = '<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>';
+  const CHECK_ICON = '<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/></svg>';
+
+  function copyBadge(type) {
+    const idMap = { prefix: 'prefixCopyBtn', suffix: 'suffixCopyBtn', suffixdate: 'suffixDateCopyBtn' };
+    const valMap = { prefix, suffix, suffixdate: suffixDate };
+    const btn = document.getElementById(idMap[type]);
+    const orig = btn.innerHTML;
+    navigator.clipboard.writeText(valMap[type]).then(() => {
+      btn.classList.add('copied');
+      btn.innerHTML = CHECK_ICON + ' コピーしました';
+      setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1800);
+    });
+  }
+
+  // 単体
+  function updateSingle() {
+    const val = document.getElementById('singleInput').value.trim();
+    const el  = document.getElementById('singleResult');
+    if (!val) { el.innerHTML = '<span class="empty-hint">ファイル名を入力すると表示されます</span>'; return; }
+    el.innerHTML = `<span class="${getColorClass('single')}">${escHtml(getTag('single'))}</span>${escHtml(val)}`;
+  }
+
+  function copySingle() {
+    const val = document.getElementById('singleInput').value.trim();
+    if (!val) return;
+    copyText(applyTag('single', val), document.getElementById('singleCopyBtn'));
+  }
+
+  // 一括
+  function updateBatch() {
+    const lines = document.getElementById('batchInput').value.split('\n').map(l => l.trim()).filter(Boolean);
+    const list  = document.getElementById('batchList');
+    if (!lines.length) { list.innerHTML = '<div class="empty-batch">ファイル名を入力すると表示されます</div>'; return; }
+    const cc = getColorClass('batch');
+    const tag = getTag('batch');
+    list.innerHTML = lines.map((name, i) => {
+      const renamed = applyTag('batch', name);
+      return `<div class="batch-item" id="item-${i}">
+        <span class="batch-item-name"><span class="${cc}">${escHtml(tag)}</span>${escHtml(name)}</span>
+        <button class="batch-item-copy" onclick="copyItem('${escAttr(renamed)}', this)">コピー</button>
+      </div>${i < lines.length-1 ? '<hr class="divider">' : ''}`;
+    }).join('');
+  }
+
+  function copyItem(text, btn) { copyText(text, btn); }
+
+  function copyAll() {
+    const lines = document.getElementById('batchInput').value.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return;
+    copyText(lines.map(n => applyTag('batch', n)).join('\n'), document.getElementById('allCopyBtn'));
+  }
+
+  function copyChip(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.classList.add('copied');
+      btn.innerHTML = CHECK_ICON.replace('13','11').replace('13','11') + ' コピーしました';
+      setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1800);
+    });
+  }
+
+  // ユーティリティ
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerHTML;
+      btn.classList.add('copied');
+      btn.textContent = '✓ コピー済み';
+      setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1800);
+    });
+  }
+
+  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s) { return s.replace(/'/g, "\\'"); }
+
+  // 見積カテゴリラベル
+  const QUOTE_CATEGORIES = [
+    'デスクトップPC','ノートPC','タッチパネル機能付きノートPC','モニター',
+    'HDMIケーブル','HDMI to VGA変換アダプター','DisplayPort to VGA変換アダプター',
+    '複合機','ビジネスホン','配線工事','ユースウェア','NAS','バックアップ用HDD',
+    '5年保守','3年保守'
+  ];
+
+  const COPY_ICON_S = '<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V2zm2 2H2v8h6v-2H4a2 2 0 0 1-2-2V4zm4-2v8h6V2H10z"/></svg>';
+
+  function renderQuoteCategories() {
+    const el = document.getElementById('quoteCategoryChips');
+    if (!el) return;
+    el.innerHTML = QUOTE_CATEGORIES.map(name => {
+      const label = '【' + name + '】';
+      return `<button class="chip" onclick="copyChip(this, '${escAttr(label)}')">${COPY_ICON_S} ${escHtml(label)}</button>`;
+    }).join('');
+  }
+
+  // 見積項目（グループ別）
+  const QUOTE_ITEMS = [
+    { group: 'ユースウェア（入替え時）', items: [
+      ['PC入替え基本パック', 25000],
+      ['基本訪問費', 10000],
+      ['Microsoft365 設定費用', 3000],
+      ['セキュリティ対策ソフト（ESET）設定費用', 2000],
+      ['セキュリティ対策ソフト（WithSecure）設定費用', 2000],
+      ['セキュリティ対策ソフト（ウイルスバスター）設定費用', 2000],
+      ['PC廃棄費', 5000],
+      ['PC廃棄費 本体', 5000],
+      ['PC廃棄費 本体＋モニター', 8000],
+    ]},
+    { group: '新規設置用', items: [
+      ['基本訪問費', 10000],
+      ['PC本体設置 ノートPC', 8000],
+      ['複合機 ドライバ設定費用', 1000],
+    ]},
+    { group: 'ソフトウェア設定', items: [
+      ['Rushfile設定費用', 3000],
+      ['ジョブカン会計 Desktop23 設定費用', 30000],
+      ['ソフトインストール 弥生販売', 30000],
+      ['ソフトインストール 弥生会計', 30000],
+    ]},
+    { group: 'NAS', items: [
+      ['訪問費用', 10000],
+      ['NAS設置費用', 20000],
+      ['バックアップ用HDD設定費用', 5000],
+      ['データ移行費（100GB）', 20000],
+    ]},
+  ];
+
+  function fmt(n) { return n.toLocaleString(); }
+
+  function renderQuoteItems() {
+    const container = document.getElementById('quoteItemsContainer');
+    if (!container) return;
+    container.innerHTML = QUOTE_ITEMS.map(grp => {
+      const rows = grp.items.map(([name, price]) => `
+        <div class="quote-row">
+          <span class="quote-name">${escHtml(name)}</span>
+          <span class="quote-price">${fmt(price)}</span>
+          <button class="quote-btn name-btn" onclick="copyQuote(this, '${escAttr(name)}')">品名</button>
+          <button class="quote-btn price-btn" onclick="copyQuote(this, '${price}')">金額</button>
+        </div>`).join('');
+      return `<div class="quote-group">
+        <div class="quote-group-label">${escHtml(grp.group)}</div>
+        <div class="quote-table">${rows}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function copyQuote(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.classList.add('copied');
+      btn.textContent = '✓';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1400);
+    });
+  }
+
+  renderQuoteCategories();
+  renderQuoteItems();
+</script>
+</body>
+</html>
