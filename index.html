@@ -136,6 +136,77 @@
     color: var(--accent4);
   }
 
+  /* 日付選択ストリップ */
+  .date-history {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: -14px 0 28px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .date-history-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .date-history-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .date-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+
+  .date-chip:hover {
+    border-color: var(--accent);
+  }
+
+  .date-chip.active-today {
+    border-color: rgba(79,195,247,0.4);
+    background: rgba(79,195,247,0.06);
+  }
+
+  .date-chip.copied {
+    border-color: var(--accent2);
+    background: rgba(129,199,132,0.08);
+  }
+
+  .date-chip-day {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .date-chip-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .date-chip.copied .date-chip-day,
+  .date-chip.copied .date-chip-val {
+    color: var(--accent2);
+  }
+
   /* モード切替 */
   .mode-toggle {
     display: flex;
@@ -725,6 +796,24 @@
     </div>
   </div>
 
+  <div class="date-history">
+    <span class="date-history-label">プレフィクス（日付選択）</span>
+    <div class="date-history-chips">
+      <button class="date-chip active-today" id="chipToday" onclick="copyDateChip(this, 0)">
+        <span class="date-chip-day">今日</span>
+        <span class="date-chip-val" id="valToday">_260415</span>
+      </button>
+      <button class="date-chip" id="chipYesterday" onclick="copyDateChip(this, 1)">
+        <span class="date-chip-day">昨日</span>
+        <span class="date-chip-val" id="valYesterday">_260414</span>
+      </button>
+      <button class="date-chip" id="chipDayBefore" onclick="copyDateChip(this, 2)">
+        <span class="date-chip-day">一昨日</span>
+        <span class="date-chip-val" id="valDayBefore">_260413</span>
+      </button>
+    </div>
+  </div>
+
   <div class="tabs">
     <button class="tab active" onclick="switchTab('single', this)">単体ファイル</button>
     <button class="tab" onclick="switchTab('batch', this)">一括（複数ファイル）</button>
@@ -1027,6 +1116,16 @@
   function getSuffix()      { const d=new Date(), yy=String(d.getFullYear()).slice(-2), mm=String(d.getMonth()+1).padStart(2,'0'); return `${yy}${mm}_`; }
   function getSuffixDate()  { const d=new Date(), yy=String(d.getFullYear()).slice(-2), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0'); return `${yy}${mm}${dd}_`; }
 
+  // n日前のプレフィクス（_yymmdd）
+  function prefixForOffset(n) {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    const yy = String(d.getFullYear()).slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `_${yy}${mm}${dd}`;
+  }
+
   const prefix     = getPrefix();
   const suffix     = getSuffix();
   const suffixDate = getSuffixDate();
@@ -1038,6 +1137,27 @@
   document.getElementById('todayPrefix').textContent    = prefix;
   document.getElementById('todaySuffix').textContent    = suffix;
   document.getElementById('todaySuffixDate').textContent = suffixDate;
+
+  // 日付選択ストリップ初期化
+  document.getElementById('valToday').textContent     = prefixForOffset(0);
+  document.getElementById('valYesterday').textContent = prefixForOffset(1);
+  document.getElementById('valDayBefore').textContent = prefixForOffset(2);
+
+  function copyDateChip(btn, offset) {
+    const text = prefixForOffset(offset);
+    navigator.clipboard.writeText(text).then(() => {
+      const wasToday = btn.classList.contains('active-today');
+      btn.classList.add('copied');
+      const dayEl = btn.querySelector('.date-chip-day');
+      const origDay = dayEl.textContent;
+      dayEl.textContent = '✓ コピー';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        if (wasToday) btn.classList.add('active-today');
+        dayEl.textContent = origDay;
+      }, 1400);
+    });
+  }
 
   // タブ切替
   function switchTab(name, btn) {
